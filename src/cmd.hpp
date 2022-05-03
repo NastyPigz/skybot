@@ -1,5 +1,3 @@
-#include <map>
-
 class BaseCommand;
 
 std::map<std::string, BaseCommand*> cmds = {};

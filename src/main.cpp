@@ -8,8 +8,9 @@
 #include <fstream>
 #include <filesystem>
 #include <dpp/fmt/format.h>
+#include <map>
 #include "cmd.hpp"
-#include "commands.hpp"
+#include "config.hpp"
 
 void ls_recursive(const std::filesystem::path& path) {
     for(const auto& p: std::filesystem::recursive_directory_iterator(path)) {
@@ -31,6 +32,7 @@ void join(const std::vector<std::string>& v, char c, std::string& s) {
 }
 
 int main() {
+    // comment this out for faster recompile
     ls_recursive("./src/commands");
 
 	if (!getenv("DISCORD_TOKEN")) {
@@ -46,7 +48,7 @@ int main() {
 
     // std::cout << typeid(bot).name();
     
-    PingCommand p(bot);
+    initCommands(bot);
 
     bot.on_message_create([&bot](const dpp::message_create_t & event) {
         if (event.msg.author.is_bot()) {
@@ -73,9 +75,6 @@ int main() {
                bot.message_create(dpp::message(event.msg.channel_id, fmt::format("Prefix detected! Cmd: {} Args: (len = {}) {}", cmd, std::to_string(vstrings.size()), s)));
             }
         }
-        // if (event.msg.content == "!ping") {
-        //     bot.message_create(dpp::message(event.msg.channel_id, "I like cheese"));
-        // }
     });
  
     bot.start(false);

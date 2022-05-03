@@ -1,1 +1,0 @@
-#include "commands/ping.hpp"
