@@ -6,20 +6,34 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
-#include <fstream>
-#include <filesystem>
-#include <map>
-#include <utility>
-#include "cmd.hpp"
-#include "config.hpp"
 
-void ls_recursive(const std::filesystem::path& path) {
-    for(const auto& p: std::filesystem::recursive_directory_iterator(path)) {
-        if (!std::filesystem::is_directory(p)) {
-            std::cout << p.path().u8string().substr(6) << '\n';
+class message_collector : public dpp::message_collector {
+public:
+    message_collector(dpp::cluster* cl) : dpp::message_collector(cl, 3) {
+        std::ofstream myfile;
+        myfile.open ("example.txt");
+        myfile << "Writing this to a file.\n";
+        myfile.close();
+    }
+
+    virtual void completed(const std::vector<dpp::message>& list) {
+        if (list.size()) {
+            owner->message_create(dpp::message(list[0].channel_id, "I collected " + std::to_string(list.size()) + " messages!"));
+        } else {
+            owner->message_create(dpp::message("... I got nothin'."));
         }
     }
-}
+
+    virtual const dpp::message* filter(const dpp::message_create_t& m) {
+        owner->message_create(dpp::message(m.msg.channel_id, "test1"));
+        if (m.msg.content.find("a") != std::string::npos) {
+            owner->message_create(dpp::message(m.msg.channel_id, "test2"));
+            return &m.msg;
+        } else {
+            return nullptr;
+        }
+    }
+};
 
 void join(const std::vector<std::string>& v, char c, std::string& s) {
 
@@ -33,8 +47,6 @@ void join(const std::vector<std::string>& v, char c, std::string& s) {
 }
 
 int main() {
-    // comment this out for faster recompile
-    ls_recursive("./src/commands");
 
 	if (!getenv("DISCORD_TOKEN")) {
 		std::cout << "Could not find the DISCORD_TOKEN environment variable.\n";
@@ -48,8 +60,6 @@ int main() {
     });
 
     // std::cout << typeid(bot).name();
-    
-    initCommands(bot);
 
     bot.on_message_create([&bot](const dpp::message_create_t & event) {
         if (event.msg.author.is_bot()) {
@@ -72,9 +82,8 @@ int main() {
             
             // dbg print
             // std::copy(vstrings.begin(), vstrings.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
-            if (!find_commands(cmd, event.msg)) {
-               bot.message_create(dpp::message(event.msg.channel_id, fmt::format("Prefix detected! Cmd: {} Args: (len = {}) {}", cmd, std::to_string(vstrings.size()), s)));
-            }
+            bot.message_create(dpp::message(event.msg.channel_id, fmt::format("Prefix detected! Cmd: {} Args: (len = {}) {}", cmd, std::to_string(vstrings.size()), s)));
+            new message_collector(&bot, 5);
         }
     });
  
